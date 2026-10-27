@@ -31,6 +31,39 @@ Para probar sin hardware: `python invernadero_rpi5.py --simular`
 Los sensores que no estén conectados se marcan como `False` en `SENSORES_REALES`
 (al inicio del archivo) y se simulan. Cada registro en MongoDB indica qué valores fueron simulados.
 
+## MongoDB en la Raspberry Pi 5 (Docker)
+
+MongoDB corre en Docker dentro de la misma Raspberry, igual que en la guía de clase,
+así el programa se conecta a `127.0.0.1` y no depende de la red.
+Cambiar `TU_CLAVE` por una contraseña propia. No escribirla en el código: el repositorio es público.
+
+1. Instalar Docker:
+
+   ```bash
+   curl -fsSL https://get.docker.com | sudo sh
+   ```
+
+2. Levantar MongoDB (se vuelve a iniciar solo si la Raspberry se reinicia):
+
+   ```bash
+   sudo docker run -d --name mongo --restart unless-stopped -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=TU_CLAVE mongo:7
+   ```
+
+3. Indicarle al programa la conexión y correrlo. Al iniciar debe decir "Conectado a MongoDB":
+
+   ```bash
+   export MONGO_URI="mongodb://admin:TU_CLAVE@127.0.0.1:27017/?authSource=admin"
+   python invernadero_rpi5.py
+   ```
+
+4. Ver las últimas lecturas guardadas (pide la clave):
+
+   ```bash
+   sudo docker exec -it mongo mongosh -u admin -p --eval 'db.getSiblingDB("Invernadero").Lecturas.find().sort({fecha:-1}).limit(3)'
+   ```
+
+Si MongoDB no responde, el programa guarda cada lectura en `respaldo.jsonl` para no perder los datos.
+
 ## Código completo (invernadero_rpi5.py)
 
 ```python
