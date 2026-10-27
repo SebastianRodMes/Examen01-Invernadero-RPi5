@@ -14,6 +14,7 @@ Uso:
     python invernadero_rpi5.py                 # con los sensores conectados
     python invernadero_rpi5.py --simular       # sin hardware (para probar en la laptop)
     python invernadero_rpi5.py --ciclos 10     # termina después de 10 lecturas
+    python invernadero_rpi5.py --detectar      # muestra en qué GPIO está cada sensor
 
 Instalación en la Raspberry Pi 5:
     python -m venv --system-site-packages venv
@@ -559,12 +560,64 @@ def crear_invernadero(simular):
     return Invernadero(sensores, rele, led, base_datos, simulador, simulados)
 
 
+# ===============================================================
+# DETECTOR DE PINES
+# Ayuda a saber qué sensor quedó en qué GPIO: busca el DHT-11 y
+# después avisa cada vez que una entrada cambia (al mojar el sensor
+# de agua o el de suelo, o al tapar el LDR).
+# ===============================================================
+PINES_A_REVISAR = [4, 5, 16, 20, 21, 22, 27]
+
+
+def detectar_pines():
+    pin_dht = None
+    print("Buscando el DHT-11...")
+    import adafruit_dht
+    import board
+    for pin in PINES_A_REVISAR:
+        dht = adafruit_dht.DHT11(getattr(board, f"D{pin}"))
+        for _ in range(3):
+            try:
+                if dht.temperature is not None:
+                    pin_dht = pin
+                    break
+            except RuntimeError:
+                time.sleep(2)
+        dht.exit()
+        if pin_dht is not None:
+            print(f"  DHT-11 encontrado en GPIO{pin_dht}  ->  PIN_DHT = {pin_dht}")
+            break
+    if pin_dht is None:
+        print("  No se encontró el DHT-11 en ninguno de los pines revisados")
+
+    from gpiozero import DigitalInputDevice
+    entradas = {p: DigitalInputDevice(p, pull_up=False) for p in PINES_A_REVISAR if p != pin_dht}
+    anterior = {p: e.value for p, e in entradas.items()}
+    print("\nEstado inicial: " + ", ".join(f"GPIO{p}={v}" for p, v in anterior.items()))
+    print("Ahora mojá el sensor de agua, después el de suelo, y tapá el LDR con la mano.")
+    print("Cada cambio aparece aquí. Ctrl+C para terminar.\n")
+    try:
+        while True:
+            for pin, entrada in entradas.items():
+                if entrada.value != anterior[pin]:
+                    anterior[pin] = entrada.value
+                    print(f"  {datetime.now():%H:%M:%S}  GPIO{pin} cambió a {entrada.value}")
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("\nDetector terminado")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Control del invernadero de tomate")
     parser.add_argument("--simular", action="store_true", help="correr sin hardware")
     parser.add_argument("--ciclos", type=int, default=0, help="cantidad de lecturas (0 = infinito)")
     parser.add_argument("--intervalo", type=float, default=INTERVALO_SEG)
+    parser.add_argument("--detectar", action="store_true", help="identificar en qué GPIO está cada sensor")
     args = parser.parse_args()
+
+    if args.detectar:
+        detectar_pines()
+        return
 
     print(f"Iniciando {DISPOSITIVO} ({'SIMULACIÓN' if args.simular else 'Raspberry Pi 5'})")
     invernadero = crear_invernadero(args.simular)
