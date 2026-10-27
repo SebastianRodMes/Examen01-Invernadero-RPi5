@@ -74,22 +74,11 @@ SIMBOLOS = {
         [(str(n), RPI_PINES[n]) for n in range(1, 41, 2)],
         [(str(n), RPI_PINES[n]) for n in range(2, 41, 2)],
         ancho=35.56),
-    "MCP3008": Simbolo(
-        "MCP3008",
-        [(str(n), f"CH{n - 1}") for n in range(1, 9)],
-        [("16", "VDD"), ("15", "VREF"), ("14", "AGND"), ("13", "CLK"),
-         ("12", "DOUT"), ("11", "DIN"), ("10", "CS/SHDN"), ("9", "DGND")],
-        ancho=22.86),
     "DHT11": Simbolo("DHT11", [("1", "VCC"), ("2", "DATA"), ("3", "GND")]),
-    "TMP36": Simbolo("TMP36", [("1", "+VS"), ("2", "VOUT"), ("3", "GND")]),
     "LLUVIA": Simbolo("LLUVIA", [("1", "S"), ("2", "+"), ("3", "-")]),
-    "FC28": Simbolo("FC28", [("1", "VCC"), ("2", "GND"), ("3", "DO"), ("4", "AO")]),
+    "SUELO": Simbolo("SUELO", [("1", "VCC"), ("2", "SIG"), ("3", "GND")]),
     "HCSR04": Simbolo("HCSR04", [("1", "VCC"), ("2", "TRIG"), ("3", "ECHO"), ("4", "GND")]),
-    "RELE": Simbolo("RELE", [("1", "VCC"), ("2", "GND"), ("3", "IN")],
-                    [("4", "COM"), ("5", "NO"), ("6", "NC")], ancho=17.78),
     "LED_RGB": Simbolo("LED_RGB", [("1", "R"), ("3", "G"), ("4", "B"), ("2", "K")]),
-    "BOMBA": Simbolo("BOMBA", [("1", "L"), ("2", "N")], ancho=12.7),
-    "AC": Simbolo("AC", [("1", "L"), ("2", "N")], ancho=12.7),
     "R": Pasivo("R"),
     "LDR": Pasivo("LDR"),
 }
@@ -99,51 +88,39 @@ SIMBOLOS = {
 # Componentes: (referencia, símbolo, valor, x, y, {pin: red})
 # ---------------------------------------------------------------
 COMPONENTES = [
-    ("U1", "RPI5", "Raspberry Pi 5 (GPIO 40 pines)", 95.25, 116.84, {
-        "1": "3V3", "2": "5V", "6": "GND", "7": "DHT_DATA", "11": "RELE_IN",
-        "16": "HC_TRIG", "18": "ECHO_3V3", "19": "SPI_MOSI", "21": "SPI_MISO",
-        "23": "SPI_SCLK", "24": "SPI_CE0", "33": "LED_R", "35": "LED_G",
-        "37": "LED_B", "39": "GND",
+    ("U1", "RPI5", "Raspberry Pi 5 (GPIO 40 pines)", 60.96, 101.6, {
+        "1": "3V3", "6": "GND", "7": "DHT_DATA", "13": "LLUVIA", "15": "SUELO",
+        "16": "HC_TRIG", "18": "HC_ECHO", "29": "LDR_OUT", "33": "LED_R",
+        "35": "LED_G", "37": "LED_B", "39": "GND",
     }),
-    ("U2", "MCP3008", "MCP3008 (ADC SPI)", 205.74, 66.04, {
-        "1": "LDR_OUT", "2": "LLUVIA_OUT", "3": "SUELO_OUT", "4": "TMP36_OUT",
-        "9": "GND", "10": "SPI_CE0", "11": "SPI_MOSI", "12": "SPI_MISO",
-        "13": "SPI_SCLK", "14": "GND", "15": "3V3", "16": "3V3",
-    }),
-    ("U3", "DHT11", "DHT-11 Temp/Hum", 314.96, 35.56,
+    ("U2", "DHT11", "DHT-11 Temp/Hum", 152.4, 45.72,
      {"1": "3V3", "2": "DHT_DATA", "3": "GND"}),
-    ("U4", "TMP36", "TMP36 Temp", 314.96, 58.42,
-     {"1": "3V3", "2": "TMP36_OUT", "3": "GND"}),
-    ("U5", "LLUVIA", "Sensor agua S8050 (lluvia)", 314.96, 81.28,
-     {"1": "LLUVIA_OUT", "2": "3V3", "3": "GND"}),
-    ("U6", "FC28", "FC-28 Humedad suelo", 314.96, 106.68,
-     {"1": "3V3", "2": "GND", "4": "SUELO_OUT"}),
-    ("U7", "HCSR04", "HC-SR04 Nivel tanque", 314.96, 139.7,
-     {"1": "5V", "2": "HC_TRIG", "3": "ECHO_5V", "4": "GND"}),
-    ("R1", "R", "10k", 375.92, 35.56, {"1": "DHT_DATA", "2": "3V3"}),
-    ("LDR1", "LDR", "LDR", 195.58, 109.22, {"1": "3V3", "2": "LDR_OUT"}),
-    ("R2", "R", "10k", 195.58, 121.92, {"1": "LDR_OUT", "2": "GND"}),
-    ("R3", "R", "1k", 375.92, 137.16, {"1": "ECHO_5V", "2": "ECHO_3V3"}),
-    ("R4", "R", "2k", 375.92, 149.86, {"1": "ECHO_3V3", "2": "GND"}),
-    ("K1", "RELE", "Modulo rele 5V (SRD-05VDC)", 205.74, 175.26, {
-        "1": "5V", "2": "GND", "3": "RELE_IN", "4": "AC_L", "5": "BOMBA_L",
-    }),
-    ("M1", "BOMBA", "Bomba de riego 110V", 287.02, 175.26, {"1": "BOMBA_L", "2": "AC_N"}),
-    ("J1", "AC", "Toma 110V AC", 287.02, 198.12, {"1": "AC_L", "2": "AC_N"}),
-    ("R5", "R", "220", 195.58, 228.6, {"1": "LED_R", "2": "LED_R_A"}),
-    ("R6", "R", "220", 195.58, 241.3, {"1": "LED_G", "2": "LED_G_A"}),
-    ("R7", "R", "220", 195.58, 254.0, {"1": "LED_B", "2": "LED_B_A"}),
-    ("D1", "LED_RGB", "LED RGB catodo comun (luz UV)", 279.4, 241.3, {
+    ("U3", "LLUVIA", "Sensor de agua (lluvia)", 152.4, 73.66,
+     {"1": "LLUVIA", "2": "3V3", "3": "GND"}),
+    ("U4", "SUELO", "Sensor humedad de suelo", 152.4, 101.6,
+     {"1": "3V3", "2": "SUELO", "3": "GND"}),
+    ("U5", "HCSR04", "HC-SR04 Nivel tanque", 152.4, 132.08,
+     {"1": "3V3", "2": "HC_TRIG", "3": "HC_ECHO", "4": "GND"}),
+    ("LDR1", "LDR", "LDR", 213.36, 45.72, {"1": "3V3", "2": "LDR_OUT"}),
+    ("R1", "R", "10k", 213.36, 58.42, {"1": "LDR_OUT", "2": "GND"}),
+    ("R2", "R", "220", 208.28, 109.22, {"1": "LED_R", "2": "LED_R_A"}),
+    ("R3", "R", "220", 208.28, 121.92, {"1": "LED_G", "2": "LED_G_A"}),
+    ("R4", "R", "220", 208.28, 134.62, {"1": "LED_B", "2": "LED_B_A"}),
+    ("D1", "LED_RGB", "LED RGB catodo comun (luz UV)", 269.24, 121.92, {
         "1": "LED_R_A", "3": "LED_G_A", "4": "LED_B_A", "2": "GND",
     }),
 ]
 
+# Tamaño de la imagen SVG/PNG (mm) y posición de las notas
+ANCHO_SVG, ALTO_SVG = 300, 195
+Y_NOTAS = 165.1
+
 TITULO = "Examen 01 - Invernadero de tomate con Raspberry Pi 5"
 NOTAS = [
     "Conexiones por etiqueta de red: los pines con el mismo nombre estan conectados.",
-    "MCP3008 por SPI0 (raspi-config > SPI). Sensores analogicos alimentados a 3.3 V.",
-    "ECHO del HC-SR04 sale a 5 V: divisor R3 (1k) / R4 (2k) lo baja a 3.3 V.",
-    "Rele activo en LOW (GPIO17). El contacto NO enciende la bomba de 110 V.",
+    "Todos los sensores se alimentan con 3V3 (pin 1). El pin 5V0 no se usa.",
+    "Agua, suelo y LDR se leen como 0/1 en un GPIO (la Pi no tiene entradas analogicas).",
+    "La bomba de riego no tiene rele: el proceso de irrigacion se simula en el programa.",
     "LED RGB en violeta (R + B) = luz UV cuando hay poca luz (LDR).",
 ]
 
@@ -240,7 +217,7 @@ def kicad_sch():
     partes.append(f'  (text "{TITULO}" (at 20.32 17.78 0) {efectos(3, justificar="left bottom")} (uuid {uid()}))')
     for i, nota in enumerate(NOTAS):
         partes.append(
-            f'  (text "{nota}" (at 20.32 {fmt(220.98 + i * 5.08)} 0)'
+            f'  (text "{nota}" (at 20.32 {fmt(Y_NOTAS + i * 5.08)} 0)'
             f' {efectos(1.8, justificar="left bottom")} (uuid {uid()}))')
 
     partes.append('  (sheet_instances (path "/" (page "1")))')
@@ -252,13 +229,13 @@ def kicad_sch():
 # SVG
 # ---------------------------------------------------------------
 def svg():
-    e = 4  # píxeles por mm
-    ancho, alto = 420 * e, 297 * e
+    e = 6  # píxeles por mm
+    ancho, alto = ANCHO_SVG * e, ALTO_SVG * e
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{ancho}" height="{alto}" '
         f'viewBox="0 0 {ancho} {alto}" font-family="Consolas, monospace">',
         f'<rect width="{ancho}" height="{alto}" fill="#fffdf6"/>',
-        f'<rect x="{5 * e}" y="{5 * e}" width="{410 * e}" height="{287 * e}" fill="none" stroke="#a00000" stroke-width="2"/>',
+        f'<rect x="{5 * e}" y="{5 * e}" width="{(ANCHO_SVG - 10) * e}" height="{(ALTO_SVG - 10) * e}" fill="none" stroke="#a00000" stroke-width="2"/>',
         f'<text x="{20.32 * e}" y="{17.78 * e}" font-size="{4.5 * e}" font-weight="bold" fill="#222">{TITULO}</text>',
     ]
     colores = {"3V3": "#d40000", "5V": "#d46a00", "GND": "#333333"}
@@ -294,7 +271,7 @@ def svg():
             out.append(f'<text x="{(px + dx) * e}" y="{(py - 0.5) * e}" font-size="{1.6 * e}" '
                        f'text-anchor="{anc}" font-weight="bold" fill="{color}">{red}</text>')
     for i, nota in enumerate(NOTAS):
-        out.append(f'<text x="{20.32 * e}" y="{(220.98 + i * 5.08) * e}" font-size="{2 * e}" fill="#222">• {nota}</text>')
+        out.append(f'<text x="{20.32 * e}" y="{(Y_NOTAS + i * 5.08) * e}" font-size="{2 * e}" fill="#222">• {nota}</text>')
     out.append("</svg>")
     return "\n".join(out)
 
