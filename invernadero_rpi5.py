@@ -5,7 +5,7 @@ Curso ITIEL-11 - Examen 01
 Controla un invernadero de tomate:
   - Captación de agua lluvia (sensor de agua usado como sensor de lluvia)
   - Nivel del contenedor de agua (sensor ultrasónico HC-SR04)
-  - Riego automático según la humedad del suelo (relé de la bomba)
+  - Riego automático según la humedad del suelo (proceso de irrigación simulado)
   - Luz UV con un LED RGB en violeta cuando baja la luz (LDR)
   - Temperatura y humedad ambiente (DHT-11)
   - Registro de todas las lecturas en MongoDB con el dispositivo y la fecha
@@ -47,8 +47,7 @@ SENSORES_REALES = {
     "nivel": True,              # HC-SR04
 }
 ACTUADORES_REALES = {
-    "rele": True,               # Relé de la bomba de riego
-    "led_uv": True,             # LED RGB
+    "led_uv": True,             # LED RGB (la bomba de riego siempre es simulada)
 }
 
 PIN_DHT = 4                     # DHT-11 DATA
@@ -57,7 +56,6 @@ PIN_SUELO = 22                  # Sensor de suelo, pin de señal (SIG / AO / DO)
 PIN_LDR = 5                     # Punto medio del divisor LDR + resistencia
 PIN_TRIG = 23                   # HC-SR04 Trig
 PIN_ECHO = 24                   # HC-SR04 Echo (a 3.3 V o con divisor de voltaje)
-PIN_RELE = 17                   # Relé IN
 PIN_LED_R = 13                  # LED RGB rojo
 PIN_LED_G = 19                  # LED RGB verde
 PIN_LED_B = 26                  # LED RGB azul
@@ -333,22 +331,15 @@ class Actuador:
         raise NotImplementedError
 
 
-class Rele(Actuador):
-    """Módulo de relé. Igual que en Arduino, se activa con LOW (active_high=False)."""
-
-    def __init__(self, nombre, pin, simular=False):
-        super().__init__(nombre)
-        self.dispositivo = None
-        if not simular:
-            from gpiozero import OutputDevice
-            self.dispositivo = OutputDevice(pin, active_high=False, initial_value=False)
+class BombaRiego(Actuador):
+    """
+    Simulación del proceso de irrigación: no hay bomba ni relé conectado.
+    El estado encendido/apagado se muestra en consola, se guarda en MongoDB
+    y el simulador lo usa para gastar agua del tanque y humedecer la tierra.
+    """
 
     def _aplicar(self):
-        if self.dispositivo:
-            if self.encendido:
-                self.dispositivo.on()
-            else:
-                self.dispositivo.off()
+        pass
 
 
 class LedUV(Actuador):
@@ -406,9 +397,9 @@ class BaseDatos:
 # revisa las alertas y guarda todo en MongoDB.
 # ===============================================================
 class Invernadero:
-    def __init__(self, sensores, rele_riego, led_uv, base_datos, simulador, simulados):
+    def __init__(self, sensores, bomba_riego, led_uv, base_datos, simulador, simulados):
         self.sensores = sensores
-        self.rele_riego = rele_riego
+        self.bomba_riego = bomba_riego
         self.led_uv = led_uv
         self.base_datos = base_datos
         self.simulador = simulador
@@ -438,15 +429,15 @@ class Invernadero:
         hay_agua = lectura.get("nivel_agua_pct", 0) > NIVEL_MIN_RIEGO_PCT
 
         if suelo is None or not hay_agua:
-            self.rele_riego.apagar()
+            self.bomba_riego.apagar()
         elif suelo < SUELO_SECO_PCT:
-            self.rele_riego.encender()
+            self.bomba_riego.encender()
         elif suelo >= SUELO_HUMEDO_PCT:
-            self.rele_riego.apagar()
+            self.bomba_riego.apagar()
         # Entre los dos umbrales se queda como estaba, así la bomba no se
         # prende y apaga a cada rato
 
-        return {"activo": self.rele_riego.encendido, "hay_agua": hay_agua}
+        return {"activo": self.bomba_riego.encendido, "hay_agua": hay_agua}
 
     def control_luz(self, lectura):
         luz = lectura.get("luz")
@@ -514,7 +505,7 @@ class Invernadero:
         self.mostrar(documento, guardado)
 
         # El simulador calcula el siguiente estado según el riego y la lluvia actuales
-        self.simulador.avanzar(self.rele_riego.encendido, lectura.get("lloviendo"))
+        self.simulador.avanzar(self.bomba_riego.encendido, lectura.get("lloviendo"))
         return documento
 
     def mostrar(self, doc, guardado):
@@ -534,7 +525,7 @@ class Invernadero:
         print(f"  MongoDB: {'guardado' if guardado else 'sin conexión, guardado en respaldo'}")
 
     def apagar_todo(self):
-        self.rele_riego.apagar()
+        self.bomba_riego.apagar()
         self.led_uv.apagar()
 
 
@@ -550,14 +541,15 @@ def crear_invernadero(simular):
     for nombre, real in reales.items():
         sensores.append(crear_sensor_real(nombre) if real else SensorSimulado(nombre, simulador))
 
-    rele_real = ACTUADORES_REALES["rele"] and not simular
     led_real = ACTUADORES_REALES["led_uv"] and not simular
-    simulados += [n for n, real in (("rele", rele_real), ("led_uv", led_real)) if not real]
+    simulados.append("bomba_riego")
+    if not led_real:
+        simulados.append("led_uv")
 
-    rele = Rele("Bomba de riego", PIN_RELE, simular=not rele_real)
+    bomba = BombaRiego("Bomba de riego")
     led = LedUV("Luz UV", PIN_LED_R, PIN_LED_G, PIN_LED_B, simular=not led_real)
     base_datos = BaseDatos(MONGO_URI, MONGO_DB, MONGO_COLECCION)
-    return Invernadero(sensores, rele, led, base_datos, simulador, simulados)
+    return Invernadero(sensores, bomba, led, base_datos, simulador, simulados)
 
 
 # ===============================================================
